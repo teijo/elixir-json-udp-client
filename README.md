@@ -32,7 +32,13 @@ Run tests found under `test/`.
 Run program
 -----------
 
+Run entrypoint:
+
 `mix run -e JsonCli.listen`
+
+Load code and dependencies to REPL:
+
+`iex -S mix`
 
 Helpers
 -------
