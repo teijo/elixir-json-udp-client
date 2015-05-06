@@ -14,3 +14,17 @@ Test installation
 
  - `elixir -v` should print the Elixir version
  - `iex` starts REPL
+
+Build
+-----
+
+Download dependencies defined in `mix.exs`, asks to install Hex on first run.
+
+`mix deps.get`
+
+Run test
+--------
+
+Run tests found under `test/`.
+
+`mix test`
