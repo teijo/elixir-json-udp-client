@@ -27,6 +27,7 @@ defmodule JsonCli.Mixfile do
   #
   # Type `mix help deps` for more examples and options
   defp deps do
-    []
+    [{:poison,  "~> 1.4.0"},
+     {:socket,  "~> 0.2.8"}]
   end
 end
