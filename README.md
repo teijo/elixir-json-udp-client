@@ -28,3 +28,15 @@ Run test
 Run tests found under `test/`.
 
 `mix test`
+
+Run program
+-----------
+
+`mix run -e JsonCli.listen`
+
+Helpers
+-------
+
+Send UDP messages from command line using Netcat
+
+`echo -n "foobar" | nc -u -w0 127.0.0.1 1337`
