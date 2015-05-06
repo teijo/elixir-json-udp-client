@@ -1,24 +1,51 @@
-defmodule Body do
-  defstruct [:boolean, :string, :number]
+defmodule ConnectOkMessage do
+  defstruct [:type, :"connection-id", :address, :port]
 end
 
-defmodule Message do
-  defstruct [:type, body: Body]
+defmodule PingMessage do
+  defstruct [:type]
+end
+
+defmodule Server do
+  defstruct [:id, :address, :port]
 end
 
 defmodule JsonCli do
-  defp read(server) do
-    { data, client } = server |> Socket.Datagram.recv!
-    message = Poison.decode!(data, as: Message)
+  defp init_sequence(socket) do
+    { data, _ } = socket |> Socket.Datagram.recv!
+    message = Poison.decode!(data, as: ConnectOkMessage)
     case message do
-      %Message{type: "test", body: body} -> server |> Socket.Datagram.send!(~s([#{body["boolean"]}, "#{body["string"]}", #{body["number"]}]), client)
-      _ -> server |> Socket.Datagram.send!("got unexpected message", client)
+      %ConnectOkMessage{type: "connect-ok", "connection-id": connection_id, address: address, port: port} ->
+        # IO.puts("connect-ok: #{connection_id}, address: #{address}, port: #{port}")
+        %Server{id: connection_id, address: address, port: port}
+      _ ->
+        IO.puts "GOT UNEXPECTED MESSAGE"
+        IO.inspect message
+        {}
     end
-    read(server)
   end
 
-  def listen() do
-    server = Socket.UDP.open!(1337)
-    read(server)
+  defp listen(socket, server) do
+    { data, client } = socket |> Socket.Datagram.recv!
+    message = Poison.decode!(data, as: PingMessage)
+    case message do
+      %PingMessage{type: "ping"} ->
+        socket |> Socket.Datagram.send!(~s({"type": "pong", "connection-id": "#{server.id}"}), client)
+      _ ->
+        IO.puts "GOT UNEXPECTED MESSAGE"
+        IO.inspect message
+    end
+    listen(socket, server)
+  end
+
+  def ip_string(ip_tuple) do
+    Enum.join(Tuple.to_list(ip_tuple), ".")
+  end
+
+  def start(client_host, client_port, server_host, server_port) do
+    socket = Socket.UDP.open!(client_port)
+    socket |> Socket.Datagram.send! ~s({"type": "connect", "address": "#{ip_string(client_host)}", "port": #{client_port}}), {server_host, server_port}
+    server = init_sequence(socket)
+    listen(socket, server)
   end
 end

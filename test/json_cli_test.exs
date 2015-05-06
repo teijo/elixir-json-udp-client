@@ -1,19 +1,28 @@
 defmodule JsonCliTest do
   use ExUnit.Case
 
-  spawn fn -> JsonCli.listen() end
+  test "init and ping" do
+    host = {127, 0, 0, 1}
+    server_port_1 = 7331
+    server_port_2 = 7332
+    client_port = 1337
+    connection_id = "foobar"
 
-  test "sent data is parsed and sent back" do
-    server = Socket.UDP.open!(7331)
-    server |> Socket.Datagram.send! ~s({"type": "test", "body": {"boolean": true, "string": "foobar", "number": 3}}), { {127, 0, 0, 1}, 1337 }
-    { data, _ } = server |> Socket.Datagram.recv!
-    assert data == ~s([true, "foobar", 3])
-  end
+    msg_ping = ~s({"type": "ping"})
+    msg_connect_ok = ~s({"type": "connect-ok", "connection-id": "#{connection_id}", "address": "127.0.0.1", "port": #{server_port_2}})
 
-  test "invalid message" do
-    server = Socket.UDP.open!(7331)
-    server |> Socket.Datagram.send! ~s({}), { {127, 0, 0, 1}, 1337 }
-    { data, _ } = server |> Socket.Datagram.recv!
-    assert data == "got unexpected message"
+    socket_1 = Socket.UDP.open! server_port_1
+    socket_2 = Socket.UDP.open! server_port_2
+
+    spawn fn -> JsonCli.start(host, client_port, host, server_port_1) end
+
+    { reply_connect, _ } = socket_1 |> Socket.Datagram.recv!
+    assert reply_connect == ~s({"type": "connect", "address": "#{JsonCli.ip_string(host)}", "port": #{client_port}})
+
+    socket_1 |> Socket.Datagram.send! msg_connect_ok, {host, client_port}
+    socket_2 |> Socket.Datagram.send! msg_ping, {host, client_port}
+
+    { data, _ } = socket_2 |> Socket.Datagram.recv!
+    assert data == ~s({"type": "pong", "connection-id": "#{connection_id}"})
   end
 end
